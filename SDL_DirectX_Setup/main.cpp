@@ -46,7 +46,8 @@ int main(int argc, char** argv)
 	{
 		std::cout << "Window initialization failed\n";
 	}
-
+	
+	// Get window handle
 	SDL_SysWMinfo wmInfo;
 	SDL_VERSION(&wmInfo.version);
 	SDL_GetWindowWMInfo(m_window, &wmInfo);
