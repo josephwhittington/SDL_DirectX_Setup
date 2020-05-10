@@ -249,8 +249,6 @@ int main(int argc, char** argv)
 		g_rotation += .001;
 		if (g_rotation > 360) g_rotation = 0;
 
-		// DONT FUCK WITH THIS
-		// Rendering shit right here
 		// Output merger
 		ID3D11RenderTargetView* tempRTV[] = { g_RenderTargetView };
 		g_DeviceContext->OMSetRenderTargets(ARRAYSIZE(tempRTV), tempRTV, depthStencil);
@@ -259,10 +257,9 @@ int main(int argc, char** argv)
 		g_DeviceContext->ClearRenderTargetView(g_RenderTargetView, color);
 		g_DeviceContext->ClearDepthStencilView(depthStencil, D3D11_CLEAR_DEPTH, 1, 0);
 
-		// Rasterizer
 		g_DeviceContext->RSSetViewports(1, &g_viewport);
-		// DONT FUCK WITH THIS
 
+		// Draw the cube
 		// World
 		//XMMATRIX temp = XMMatrixIdentity();
 		XMMATRIX temp = XMMatrixRotationY(g_rotation);
@@ -295,6 +292,7 @@ int main(int argc, char** argv)
 		g_DeviceContext->IASetInputLayout(cube.input_layout);
 
 		g_DeviceContext->DrawIndexed(cube.indices.size(), 0, 0);
+		// Draw the cube
 
 		g_Swapchain->Present(0, 0);
 	}
@@ -335,41 +333,41 @@ void CleanupCube(Cube& cube)
 
 void ConstructCube(Cube& cube, const BYTE* _vs, const BYTE* _ps, int vs_size, int ps_size)
 {
-	// TODO: Replace 1 with half-unit length to make scaling easier
 	// Construct vertices
 	Vertex vert;
+	float HUL = .5; //  Half unity length
 
 	// Top forward left
-	vert.position = XMFLOAT3(-1,  1, -1);
+	vert.position = XMFLOAT3(-HUL, HUL, -HUL);
 	vert.color = XMFLOAT3(0, 0, 1);
 	cube.vertices.push_back(vert);
 	// Top forward right
-	vert.position = XMFLOAT3( 1,  1, -1);
+	vert.position = XMFLOAT3(HUL, HUL, -HUL);
 	vert.color = XMFLOAT3(0, 1, 0);
 	cube.vertices.push_back(vert);
 	// Top back left
-	vert.position = XMFLOAT3(-1,  1,  1);
+	vert.position = XMFLOAT3(-HUL, HUL, HUL);
 	vert.color = XMFLOAT3(1, 0, 0);
 	cube.vertices.push_back(vert);
 	// Top back right
-	vert.position = XMFLOAT3( 1,  1,  1);
+	vert.position = XMFLOAT3(HUL, HUL, HUL);
 	vert.color = XMFLOAT3(1, 0, 1);
 	cube.vertices.push_back(vert);
 	
 	// Bottom forward left
-	vert.position = XMFLOAT3(-1, -1, -1);
+	vert.position = XMFLOAT3(-HUL, -HUL, -HUL);
 	vert.color = XMFLOAT3(1, 1, 0);
 	cube.vertices.push_back(vert);
 	// Bottom forward right
-	vert.position = XMFLOAT3( 1, -1, -1);
+	vert.position = XMFLOAT3(HUL, -HUL, -HUL);
 	vert.color = XMFLOAT3(0, 1, 1);
 	cube.vertices.push_back(vert);
 	// Bottom backward left
-	vert.position = XMFLOAT3(-1, -1,  1);
+	vert.position = XMFLOAT3(-HUL, -HUL, HUL);
 	vert.color = XMFLOAT3(1, 1, 1);
 	cube.vertices.push_back(vert);
 	// Bottom backward right
-	vert.position = XMFLOAT3( 1, -1,  1);
+	vert.position = XMFLOAT3(HUL, -HUL, HUL);
 	vert.color = XMFLOAT3(0, 0, 0);
 	cube.vertices.push_back(vert);
 
@@ -392,8 +390,6 @@ void ConstructCube(Cube& cube, const BYTE* _vs, const BYTE* _ps, int vs_size, in
 	// Right face
 	cube.indices.push_back(1); cube.indices.push_back(3); cube.indices.push_back(7);
 	cube.indices.push_back(1); cube.indices.push_back(7); cube.indices.push_back(5);
-
-	// TODO: Make other faces
 
 	// Make vertex buffer
 	D3D11_BUFFER_DESC bufferDesc;
