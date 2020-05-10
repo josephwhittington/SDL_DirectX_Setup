@@ -38,7 +38,7 @@ int main(int argc, char** argv)
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 
-	// Fullscreen
+	// Full screen
 	if(g_fullscreen)
 		SDL_SetWindowFullscreen(m_window, SDL_WINDOW_FULLSCREEN);
 
