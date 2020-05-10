@@ -3,12 +3,14 @@
 struct InputVertex
 {
     float3 position : POSITION;
+    float3 color : COLOR;
 };
 
 struct OutputVertex
 {
     float4 position : SV_Position;
     float3 worldpos : WORLDPOS;
+    float3 color : COLOR;
 };
 
 cbuffer WORLD : register(b0)
@@ -21,6 +23,8 @@ cbuffer WORLD : register(b0)
 OutputVertex main(InputVertex input)
 {
     OutputVertex output;
+    
+    output.color = input.color;
 
     output.position = float4(input.position, 1);
     output.position = mul(output.position, worldmat);

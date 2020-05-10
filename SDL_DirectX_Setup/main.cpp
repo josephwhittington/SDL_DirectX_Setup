@@ -53,6 +53,7 @@ struct WorldViewProjection {
 struct Vertex
 {
 	XMFLOAT3 position;
+	XMFLOAT3 color;
 };
 
 struct Cube
@@ -173,10 +174,11 @@ int main(int argc, char** argv)
 	result = g_Device->CreateRasterizerState(&rdesc, &rasterizerStateWireframe);
 	ASSERT_HRESULT_SUCCESS(result);
 
-	g_DeviceContext->RSSetState(rasterizerStateWireframe);
+	g_DeviceContext->RSSetState(rasterizerStateDefault);
 
 	// Initialize camera
-	camera.SetPosition(XMFLOAT3(0, 0, -5));
+	camera.SetPosition(XMFLOAT3(0, 1.5, -5));
+	camera.Rotate(0, -20);
 	camera.SetFOV(45);
 
 	ConstructCube(cube, cube_vs, cube_ps, sizeof(cube_vs), sizeof(cube_ps));
@@ -339,28 +341,36 @@ void ConstructCube(Cube& cube, const BYTE* _vs, const BYTE* _ps, int vs_size, in
 
 	// Top forward left
 	vert.position = XMFLOAT3(-1,  1, -1);
+	vert.color = XMFLOAT3(0, 0, 1);
 	cube.vertices.push_back(vert);
 	// Top forward right
 	vert.position = XMFLOAT3( 1,  1, -1);
+	vert.color = XMFLOAT3(0, 1, 0);
 	cube.vertices.push_back(vert);
 	// Top back left
 	vert.position = XMFLOAT3(-1,  1,  1);
+	vert.color = XMFLOAT3(1, 0, 0);
 	cube.vertices.push_back(vert);
 	// Top back right
 	vert.position = XMFLOAT3( 1,  1,  1);
+	vert.color = XMFLOAT3(1, 0, 1);
 	cube.vertices.push_back(vert);
 	
 	// Bottom forward left
 	vert.position = XMFLOAT3(-1, -1, -1);
+	vert.color = XMFLOAT3(1, 1, 0);
 	cube.vertices.push_back(vert);
 	// Bottom forward right
 	vert.position = XMFLOAT3( 1, -1, -1);
+	vert.color = XMFLOAT3(0, 1, 1);
 	cube.vertices.push_back(vert);
 	// Bottom backward left
 	vert.position = XMFLOAT3(-1, -1,  1);
+	vert.color = XMFLOAT3(1, 1, 1);
 	cube.vertices.push_back(vert);
 	// Bottom backward right
 	vert.position = XMFLOAT3( 1, -1,  1);
+	vert.color = XMFLOAT3(0, 0, 0);
 	cube.vertices.push_back(vert);
 
 	// Make the triangles with the indices
@@ -368,8 +378,20 @@ void ConstructCube(Cube& cube, const BYTE* _vs, const BYTE* _ps, int vs_size, in
 	cube.indices.push_back(0); cube.indices.push_back(1); cube.indices.push_back(5);
 	cube.indices.push_back(0); cube.indices.push_back(5); cube.indices.push_back(4);
 	// Back face
-	cube.indices.push_back(2); cube.indices.push_back(3); cube.indices.push_back(7);
-	cube.indices.push_back(2); cube.indices.push_back(7); cube.indices.push_back(6);
+	cube.indices.push_back(2); cube.indices.push_back(7); cube.indices.push_back(3);
+	cube.indices.push_back(2); cube.indices.push_back(6); cube.indices.push_back(7);
+	// Top face
+	cube.indices.push_back(2); cube.indices.push_back(3); cube.indices.push_back(1);
+	cube.indices.push_back(2); cube.indices.push_back(1); cube.indices.push_back(0);
+	// Bottom face
+	cube.indices.push_back(6); cube.indices.push_back(5); cube.indices.push_back(7);
+	cube.indices.push_back(6); cube.indices.push_back(4); cube.indices.push_back(5);
+	// Left face
+	cube.indices.push_back(2); cube.indices.push_back(0); cube.indices.push_back(4);
+	cube.indices.push_back(2); cube.indices.push_back(4); cube.indices.push_back(6);
+	// Right face
+	cube.indices.push_back(1); cube.indices.push_back(3); cube.indices.push_back(7);
+	cube.indices.push_back(1); cube.indices.push_back(7); cube.indices.push_back(5);
 
 	// TODO: Make other faces
 
@@ -407,6 +429,7 @@ void ConstructCube(Cube& cube, const BYTE* _vs, const BYTE* _ps, int vs_size, in
 	D3D11_INPUT_ELEMENT_DESC tempInputElementDesc[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
 	result = g_Device->CreateInputLayout(tempInputElementDesc, ARRAYSIZE(tempInputElementDesc), _vs, vs_size, &cube.input_layout);
