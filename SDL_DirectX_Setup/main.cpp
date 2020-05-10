@@ -16,6 +16,7 @@ ID3D11Device* g_Device;
 IDXGISwapChain* g_Swapchain;
 ID3D11DeviceContext* g_DeviceContext;
 float g_aspectRatio;
+bool g_fullscreen = false;
 
 // For drawing  -> New stuff right here
 ID3D11RenderTargetView* g_RenderTargetView;
@@ -36,6 +37,10 @@ int main(int argc, char** argv)
 	SDL_Window* m_window = SDL_CreateWindow("SDLTemplate",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+
+	// Fullscreen
+	if(g_fullscreen)
+		SDL_SetWindowFullscreen(m_window, SDL_WINDOW_FULLSCREEN);
 
 	if (!m_window)
 	{
@@ -114,6 +119,16 @@ int main(int argc, char** argv)
 			{
 				if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
 					RUNNING = false;
+				else if (event.key.keysym.scancode == SDL_SCANCODE_F && g_fullscreen)
+				{
+					g_fullscreen = false;
+					SDL_SetWindowFullscreen(m_window, 0);
+				}
+				else if (event.key.keysym.scancode == SDL_SCANCODE_F && !g_fullscreen)
+				{
+					g_fullscreen = true;
+					SDL_SetWindowFullscreen(m_window, SDL_WINDOW_FULLSCREEN);
+				}
 			}
 		}
 	}
@@ -124,6 +139,11 @@ int main(int argc, char** argv)
 	D3DSAFERELEASE(g_Device);
 	D3DSAFERELEASE(g_RenderTargetView);
 	// Delete
+
+	// SDL shutdown
+	if(m_window)
+		SDL_DestroyWindow(m_window);
+	SDL_Quit();
 
 	return EXIT_SUCCESS;
 }
