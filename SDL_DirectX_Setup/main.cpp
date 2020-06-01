@@ -1,5 +1,13 @@
 #include <iostream>
+#include <string>
 #include <vector>
+#include <fstream>
+#include <sstream>
+
+//IMGUI
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl.h"
+#include "imgui/imgui_impl_dx11.h"
 
 #include "SDL.h"
 #include "SDL_syswm.h"
@@ -73,11 +81,87 @@ struct Cube
 
 FPSCamera camera;
 Cube cube;
+
+// States
+long long ticks = 0;
+bool show_ui = true;
+bool update_cube_rotation = true;
+bool show_cube_settings = false;
+bool show_camera_settings = false;
+
+ImVec4 clear_color = ImVec4(0, 0, 0, 1.00f);
 // Custom stuff
 
 // Forward declarations
 void ConstructCube(Cube& cube, const BYTE* _vs, const BYTE* _ps, int vs_size, int ps_size);
 void CleanupCube(Cube& cube);
+void LoadSettings();
+void SaveSettings();
+
+
+void SaveSettings()
+{
+	std::ofstream settings;
+	settings.open("files/settings.txt", std::ios::out);
+
+	assert(settings.is_open());
+
+	std::stringstream settingstring;
+
+	settingstring << "#clear_color\n";
+	settingstring << clear_color.x << " ";
+	settingstring << clear_color.y << " ";
+	settingstring << clear_color.z << " ";
+	settingstring << "\n";
+
+	settingstring << "#show_cube\n";
+	settingstring << (int)show_cube_settings << "\n";
+	settingstring << "#show_camera\n";
+	settingstring << (int)show_camera_settings << "\n";
+
+	settings.write(settingstring.str().c_str(), settingstring.str().length());
+
+	settings.close();
+}
+
+void LoadSettings()
+{
+	std::ifstream settings;
+	settings.open("files/settings.txt", std::ios::in | std::ios::binary);
+
+	assert(settings.is_open());
+
+	std::string line;
+	std::string otherline;
+
+	while (std::getline(settings, line))
+	{
+		if (line.find("clear_color") != std::string::npos)
+		{
+			std::getline(settings, otherline);
+
+			std::stringstream color(otherline);
+
+			color >> clear_color.x;
+			color >> clear_color.y;
+			color >> clear_color.z;
+		}
+		else if (line.find("#show_cube") != std::string::npos)
+		{
+			std::getline(settings, otherline);
+
+			std::stringstream thing(otherline);
+			thing >> show_cube_settings;
+		}
+		else if (line.find("#show_camera") != std::string::npos)
+		{
+			std::getline(settings, otherline);
+
+			std::stringstream thing(otherline);
+			thing >> show_camera_settings;
+		}
+	}
+}
 
 int main(int argc, char** argv)
 {
@@ -102,6 +186,8 @@ int main(int argc, char** argv)
 	{
 		std::cout << "Window initialization failed\n";
 	}
+
+	LoadSettings();
 
 	SDL_SysWMinfo wmInfo;
 	SDL_VERSION(&wmInfo.version);
@@ -132,6 +218,18 @@ int main(int argc, char** argv)
 
 	result = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_DEBUG, &DX11, 1, D3D11_SDK_VERSION, &swap, &g_Swapchain, &g_Device, 0, &g_DeviceContext);
 	assert(!FAILED(result));
+
+	// Setup ImGui
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+
+	// Setup Platform/Renderer bindings
+	ImGui_ImplSDL2_InitForD3D(m_window);
+	ImGui_ImplDX11_Init(g_Device, g_DeviceContext);
 
 	ID3D11Resource* backbuffer;
 	result = g_Swapchain->GetBuffer(0, __uuidof(backbuffer), (void**)&backbuffer);
@@ -217,13 +315,25 @@ int main(int argc, char** argv)
 	result = g_Device->CreateDepthStencilView(zBuffer, nullptr, &depthStencil);
 	ASSERT_HRESULT_SUCCESS(result);
 
+	XMFLOAT3 cube_position = XMFLOAT3(0, 0, 0);
+	float rotation_speed = 1;
+	float fov = XMConvertToDegrees(camera.GetFOV());
+
+	// State
+	
+
 	// Main loop
 	while (RUNNING)
 	{
+		// Timing
+		ticks += 1;
 		// Event check
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
+			// Process events through SDL
+			ImGui_ImplSDL2_ProcessEvent(&event);
+
 			// Input handling
 			if (event.type == SDL_QUIT)
 				RUNNING = false;
@@ -241,20 +351,125 @@ int main(int argc, char** argv)
 					g_fullscreen = true;
 					SDL_SetWindowFullscreen(m_window, SDL_WINDOW_FULLSCREEN);
 				}
+				else if (event.key.keysym.scancode == SDL_SCANCODE_SPACE && ticks > 30)
+				{
+					// Reset ticks
+					ticks = 0;
+					show_ui = !show_ui;
+				}
 			}
 			// Input handling
 		}
 
+		// Start the Dear ImGui frame
+		ImGui_ImplDX11_NewFrame();
+		ImGui_ImplSDL2_NewFrame(m_window);
+		ImGui::NewFrame();
+
+		{
+			std::string button_text_cube = "Show Cube Settings";
+			std::string button_text_camera = "Show Camera Settings";
+			std::string button_text_hide = "Hide All";
+			std::string button_text_show = "Show All";
+
+			if (show_cube_settings) button_text_cube = "Hide Cube Settings";
+			if (show_camera_settings) button_text_camera = "Hide Camera Settings";
+
+			ImGui::Begin("Menu");
+
+			bool button_cube_pressed = ImGui::Button(button_text_cube.c_str());
+			ImGui::SameLine();
+			bool button_camera_pressed = ImGui::Button(button_text_camera.c_str());
+			ImGui::SameLine();
+			bool button_hide_all_pressed = ImGui::Button(button_text_hide.c_str());
+			ImGui::SameLine();
+			bool button_show_all_pressed = ImGui::Button(button_text_show.c_str());
+			ImGui::SameLine();
+			bool button_hide_ui_pressed = ImGui::Button("Hide UI");
+
+			if (button_cube_pressed) show_cube_settings = !show_cube_settings;
+			if (button_camera_pressed) show_camera_settings = !show_camera_settings;
+			if (button_hide_all_pressed)
+			{
+				show_cube_settings = false;
+				show_camera_settings = false;
+			}
+			if (button_show_all_pressed)
+			{
+				show_cube_settings = true;
+				show_camera_settings = true;
+			}
+			if (button_hide_ui_pressed) show_ui = false;
+
+			ImGui::End();
+		}
+
+		{
+			ImGui::Begin("Application Info");
+
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+			ImGui::End();
+		}
+
+		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+		if(show_cube_settings)
+		{
+
+			ImGui::Begin("Cube Settings");                                 // Create a window called "Hello, world!" and append into it.
+
+			ImGui::Checkbox("Rotate Cube", &update_cube_rotation);
+			ImGui::SliderFloat("Rotation Speed", &rotation_speed, 0, 3.0f);         // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::SliderFloat("Cube X", &cube_position.x, -5.0f, 5.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::SliderFloat("Cube Y", &cube_position.y, -5.0f, 5.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::SliderFloat("Cube Z", &cube_position.z, -5.0f, 5.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::ColorEdit3("clear color", (float*)&clear_color);                 // Edit 3 floats representing a color
+
+			bool reset_pos = ImGui::Button("Reset Position");
+			ImGui::SameLine();
+			bool reset_color = ImGui::Button("Reset Color");
+
+			if (reset_pos)
+			{
+				cube_position = XMFLOAT3(0, 0, 0);
+			}
+			if (reset_color)
+			{
+				clear_color = ImVec4(0, 0, 0, 1);
+			}
+
+			ImGui::End();
+		}
+
+		if(show_camera_settings)
+		{
+			ImGui::Begin("Camera Stuff");
+
+			ImGui::Text("Camera Position (x, y, z): %.2f, %.2f, %.2f", camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
+			ImGui::SliderFloat("Camera FOV", &fov, 30, 120.0f);
+			// Update the camera FOV
+			camera.SetFOV(fov);
+
+			ImGui::End();
+		}
+
+		// IMGUI Rendering
+		ImGui::Render();
+
 		// Rotation
-		g_rotation += .001;
-		if (g_rotation > 360) g_rotation = 0;
+		if (update_cube_rotation)
+		{
+			g_rotation += .01;
+			if (g_rotation > 360) g_rotation = 0;
+		}
 
 		// Output merger
 		ID3D11RenderTargetView* tempRTV[] = { g_RenderTargetView };
 		g_DeviceContext->OMSetRenderTargets(ARRAYSIZE(tempRTV), tempRTV, depthStencil);
 
-		float color[4] = { 0, 0, 0, 1 };
-		g_DeviceContext->ClearRenderTargetView(g_RenderTargetView, color);
+		float color[4];
+		memcpy(color, &clear_color, sizeof(float) * 4);
+		g_DeviceContext->ClearRenderTargetView(g_RenderTargetView, (float*)&clear_color);
 		g_DeviceContext->ClearDepthStencilView(depthStencil, D3D11_CLEAR_DEPTH, 1, 0);
 
 		g_DeviceContext->RSSetViewports(1, &g_viewport);
@@ -262,7 +477,8 @@ int main(int argc, char** argv)
 		// Draw the cube
 		// World
 		//XMMATRIX temp = XMMatrixIdentity();
-		XMMATRIX temp = XMMatrixRotationY(g_rotation);
+		XMMATRIX temp = XMMatrixRotationY(g_rotation * rotation_speed);
+		temp = XMMatrixMultiply(temp, XMMatrixTranslation(cube_position.x, cube_position.y, cube_position.z));
 		XMStoreFloat4x4(&WORLD.WorldMatrix, temp);
 
 		// View
@@ -294,11 +510,20 @@ int main(int argc, char** argv)
 		g_DeviceContext->DrawIndexed(cube.indices.size(), 0, 0);
 		// Draw the cube
 
+		// IMGUI Rendering
+		if(show_ui)
+			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
 		g_Swapchain->Present(0, 0);
 	}
 
 	// Cleanup
 	CleanupCube(cube);
+
+	// Cleanup
+	ImGui_ImplDX11_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
+	ImGui::DestroyContext();
 
 	// Delete
 	D3DSAFERELEASE(g_Swapchain);
@@ -318,6 +543,8 @@ int main(int argc, char** argv)
 	if(m_window)
 		SDL_DestroyWindow(m_window);
 	SDL_Quit();
+
+	SaveSettings();
 
 	return EXIT_SUCCESS;
 }
